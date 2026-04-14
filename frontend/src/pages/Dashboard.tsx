@@ -9,7 +9,7 @@ import {
 
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SiteLogo from '../components/SiteLogo';
 
 const parseUTC = (dateStr: string) => {
@@ -22,6 +22,8 @@ const parseUTC = (dateStr: string) => {
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const handleLogout = async () => { await logout(); navigate('/login'); };
   const [file, setFile] = useState<File | null>(null);
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<any>(null);
@@ -359,7 +361,7 @@ const Dashboard: React.FC = () => {
             <Link to="/profile" className="flex items-center gap-2.5 px-3 py-1.5 bg-gray-800 rounded-full border border-gray-700 hover:bg-gray-700 transition-all group">
               <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-600 flex items-center justify-center text-white text-[10px] font-black shrink-0">
                 {user?.profile_picture
-                  ? <img src={`http://localhost:8002/avatars/${user.profile_picture}`} alt="avatar" className="w-full h-full object-cover" />
+                  ? <img src={`/avatars/${user.profile_picture}`} alt="avatar" className="w-full h-full object-cover" />
                   : (user?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || user?.email?.[0]?.toUpperCase() || 'U')
                 }
               </div>
@@ -369,7 +371,7 @@ const Dashboard: React.FC = () => {
             </Link>
             <button
               type="button"
-              onClick={logout}
+              onClick={handleLogout}
               className="p-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-400 hover:text-red-400 hover:border-red-900 hover:bg-red-900/30 transition-all"
               title="Logout"
             >

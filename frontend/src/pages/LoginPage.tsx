@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { Loader2, Mail, Phone, KeyRound, ArrowRight, RefreshCw } from 'lucide-react';
 import SiteLogo from '../components/SiteLogo';
+import LoginDarkPremium from '../components/LoginDarkPremium';
 
 type LoginTab = 'email' | 'phone';
 
@@ -54,6 +55,10 @@ const LoginPage: React.FC = () => {
     try {
       const res = await api.post('/auth/send-otp', { phone_number: phone.trim() });
       setOtpSent(true);
+      // Dev mode: backend returns the OTP so it can be tested without SMS
+      if (res.data.dev_otp) {
+        setOtp(res.data.dev_otp);
+      }
     } catch (err) {
       const e2 = err as { response?: { data?: { detail?: string } } };
       setError(e2.response?.data?.detail || 'Failed to send OTP.');
@@ -69,8 +74,9 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.post('/auth/verify-otp', { phone_number: phone.trim(), otp: otp.trim() });
-      await login(res.data.access_token);
+      await api.post('/auth/verify-otp', { phone_number: phone.trim(), otp: otp.trim() });
+      // Server set httpOnly cookie — just refresh the user profile
+      await login();
       navigate('/');
     } catch (err) {
       const e2 = err as { response?: { data?: { detail?: string } } };
@@ -89,8 +95,9 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <LoginDarkPremium />
+      <div className="dark-premium-card-wrapper max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
 
         {/* Header */}
         <div className="flex flex-col items-center mb-8">
@@ -230,12 +237,12 @@ const LoginPage: React.FC = () => {
           </form>
         )}
 
-        <p className="text-center mt-6 text-slate-600 text-sm">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-gray-700 font-semibold hover:underline">
-            Register now
-          </Link>
-        </p>
+        {/* Footer */}
+        <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account? <Link to="/register" className="text-gray-700 font-semibold hover:text-gray-900">Register now</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

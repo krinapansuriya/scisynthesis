@@ -13,14 +13,17 @@ ENHANCED endpoints (same URL, same response shape, new fields added):
   POST /analysis/global-search   → now returns `citations` array + reranked results
 """
 
+import logging
 import os
 import json
 import re
 import time
 from typing import List, Optional
 
+logger = logging.getLogger("scisynthesis.analysis")
+
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Depends, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from google import genai
@@ -55,6 +58,28 @@ _MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
+MAX_PDF_SIZE = 50 * 1024 * 1024   # 50 MB per file
+PDF_MAGIC    = b"%PDF"            # All valid PDFs start with this
+
+
+def _validate_upload(content: bytes, filename: str) -> None:
+    """
+    Reject files that are not valid PDFs or exceed the size limit.
+    Checks magic bytes — not just the filename extension — to prevent
+    polyglot/disguised file uploads.
+    """
+    if len(content) > MAX_PDF_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{filename}' exceeds the 50 MB size limit.",
+        )
+    if not content.startswith(PDF_MAGIC):
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{filename}' is not a valid PDF file.",
+        )
+
 
 def get_simulated_analysis(topic_hint: str = "") -> dict:
     return {
@@ -117,7 +142,7 @@ async def _paper_filename_map(paper_ids: List[int], db: AsyncSession) -> dict:
 # ── Pydantic models ──────────────────────────────────────────────────────────
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = Field(..., min_length=1, max_length=2000)
     paper_ids: Optional[List[int]] = None
 
 
@@ -252,6 +277,7 @@ async def analyze_document(
 
     try:
         content = await file.read()
+        _validate_upload(content, file.filename)  # magic bytes + size check
         await ingest_document(new_paper.id, content, file.filename, db)
 
         if is_demo_mode:
@@ -345,6 +371,7 @@ async def analyze_batch(
 
         try:
             content = await upload.read()
+            _validate_upload(content, upload.filename)  # magic bytes + size check
 
             # Ingest into shared vector store
             num_chunks = await ingest_document(paper.id, content, upload.filename, db)
@@ -506,7 +533,7 @@ Respond in JSON:
 # ── NEW: context-aware chat with conversation memory ─────────────────────────
 
 class ChatRequest(BaseModel):
-    query: str
+    query: str = Field(..., min_length=1, max_length=2000)
     paper_ids: Optional[List[int]] = None
     clear_history: bool = False     # set True to start a fresh session
 
@@ -730,7 +757,7 @@ Respond in strict JSON:
 # ── ENHANCED: global search (+ citations, + reranking) ───────────────────────
 
 class GlobalSearchRequest(BaseModel):
-    query: str
+    query: str = Field(..., min_length=1, max_length=2000)
     top_k: Optional[int] = 5
 
 

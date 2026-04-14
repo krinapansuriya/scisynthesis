@@ -12,7 +12,7 @@ const ProjectSynthesisPage: React.FC = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [synthesis, setSynthesis] = useState<any>(null);
-  const [, setProject] = useState<any>(null);
+  const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -152,6 +152,8 @@ const ProjectSynthesisPage: React.FC = () => {
       ]);
       setProject(projRes.data);
       setSynthesis(synthRes.data);
+      console.log('[Synthesis] overall_theme:', synthRes.data?.overall_theme);
+      console.log('[Project] name:', projRes.data?.name);
     } catch (err) {
       const e = err as { response?: { data?: { detail?: string } } };
       const msg = e?.response?.data?.detail || 'Could not synthesize project. Ensure you have papers uploaded.';
@@ -215,7 +217,13 @@ const ProjectSynthesisPage: React.FC = () => {
                    </div>
                    <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-300">Project Theme Analysis</h3>
                 </div>
-                <h1 className="text-4xl font-bold mb-6 leading-tight">{synthesis.overall_theme}</h1>
+                <h1 className="text-4xl font-bold mb-6 leading-tight text-white">
+                  {synthesis.overall_theme
+                    && synthesis.overall_theme !== 'str'
+                    && synthesis.overall_theme.trim() !== ''
+                    ? synthesis.overall_theme
+                    : project?.name || 'Research Synthesis Report'}
+                </h1>
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10">
                    <Target size={16} className="text-gray-400" />
                    <span className="text-sm font-medium">Synthesis Confidence: {synthesis.confidence_score}%</span>

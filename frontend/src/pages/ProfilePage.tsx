@@ -11,7 +11,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import SiteLogo from '../components/SiteLogo';
 
-const BACKEND = 'http://localhost:8002';
+const BACKEND = '';   // Vite proxy handles /avatars → backend
 
 interface Stats {
   papers_analyzed: number;
@@ -32,8 +32,8 @@ const ProfilePage: React.FC = () => {
   const { user, updateUser, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -156,8 +156,8 @@ const ProfilePage: React.FC = () => {
 
       if (emailChanged) {
         // Email changed — JWT is now invalid, force re-login
-        setTimeout(() => {
-          logout();
+        setTimeout(async () => {
+          await logout();
           navigate('/login');
         }, 2000);
       } else {

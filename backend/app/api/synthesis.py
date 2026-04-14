@@ -120,14 +120,14 @@ async def synthesize_project(
     {json.dumps(papers_data, indent=2)}
 
     DIRECTIVE: Synthesize the input analyses. Identify consensus, find contradictions between papers, and propose a strategic unified research gap.
-    STRICT JSON OUTPUT FORMAT:
+    STRICT JSON OUTPUT FORMAT (replace every placeholder with actual content — do NOT return placeholder text like "str"):
     {{
-        "overall_theme": "str",
-        "consensus_findings": ["str"],
-        "major_contradictions": ["str"],
-        "combined_research_gap": "str",
-        "strategic_next_steps": ["str"],
-        "confidence_score": 0-100
+        "overall_theme": "A concise title describing the collective research theme across all papers (e.g. 'Deep Learning Approaches for Medical Image Segmentation')",
+        "consensus_findings": ["Key finding agreed upon by multiple papers", "Another shared conclusion"],
+        "major_contradictions": ["Paper A says X while Paper B says Y", "..."],
+        "combined_research_gap": "A single paragraph describing the unified research gap across all papers",
+        "strategic_next_steps": ["Concrete next research step 1", "Concrete next research step 2"],
+        "confidence_score": 85
     }}
     """
 

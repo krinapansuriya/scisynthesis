@@ -26,6 +26,13 @@ const ProjectAdvancedPage: React.FC = () => {
   const [similarPaperId, setSimilarPaperId] = useState<number | ''>('');
   const [similarResult, setSimilarResult] = useState<any[]>([]);
 
+  // Literature Review state
+  const [reviewFocusTopic, setReviewFocusTopic] = useState('');
+  const [reviewResult, setReviewResult] = useState<any>(null);
+
+  // Research Gaps state
+  const [gapsResult, setGapsResult] = useState<any>(null);
+
   useEffect(() => {
     fetchProject();
   }, [projectId]);
@@ -151,6 +158,35 @@ const ProjectAdvancedPage: React.FC = () => {
     setLoading(false);
   };
 
+  const handleLiteratureReview = async () => {
+    setLoading(true);
+    setReviewResult(null);
+    try {
+      const res = await api.post('/analysis/generate-review', {
+        paper_ids: papers.map(p => p.id),
+        focus_topic: reviewFocusTopic || undefined,
+      });
+      setReviewResult(res.data);
+    } catch {
+      alert('Literature review requires at least 1 paper. Make sure papers are uploaded.');
+    }
+    setLoading(false);
+  };
+
+  const handleDetectGaps = async () => {
+    setLoading(true);
+    setGapsResult(null);
+    try {
+      const res = await api.post('/analysis/detect-gaps', {
+        paper_ids: papers.map(p => p.id),
+      });
+      setGapsResult(res.data);
+    } catch {
+      alert('Gap detection failed. Make sure at least 1 paper is uploaded.');
+    }
+    setLoading(false);
+  };
+
   const handleCluster = async () => {
     setLoading(true);
     try {
@@ -188,6 +224,12 @@ const ProjectAdvancedPage: React.FC = () => {
         </button>
         <button type="button" className={`p-2 text-left rounded ${activeTab === 'cluster' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`} onClick={() => { setActiveTab('cluster'); setResult(null); }}>
           Semantic Clustering
+        </button>
+        <button type="button" className={`p-2 text-left rounded ${activeTab === 'review' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`} onClick={() => { setActiveTab('review'); setResult(null); setReviewResult(null); }}>
+          Literature Review
+        </button>
+        <button type="button" className={`p-2 text-left rounded ${activeTab === 'gaps' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`} onClick={() => { setActiveTab('gaps'); setResult(null); setGapsResult(null); }}>
+          Research Gaps
         </button>
         <div className="border-t border-gray-200 my-2" />
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-1">Advanced</p>
@@ -409,7 +451,200 @@ const ProjectAdvancedPage: React.FC = () => {
           </div>
         )}
 
-        {activeTab !== 'chat' && activeTab !== 'citations' && activeTab !== 'keywords' && activeTab !== 'similar' && (
+        {activeTab === 'review' && (
+          <div className="max-w-4xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold">Literature Review Generator</h1>
+              <button type="button" onClick={handleLiteratureReview} disabled={loading || papers.length === 0} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 disabled:opacity-50">
+                {loading ? 'Generating...' : 'Generate Review'}
+              </button>
+            </div>
+            <div className="bg-white p-4 rounded-lg border shadow-sm mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Focus Topic (optional)</label>
+              <input
+                type="text"
+                value={reviewFocusTopic}
+                onChange={e => setReviewFocusTopic(e.target.value)}
+                placeholder="e.g. transformer attention mechanisms, drug discovery, NLP evaluation..."
+                className="w-full border p-2 rounded-lg text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">Leave blank to auto-detect the main topic from your papers.</p>
+            </div>
+            {loading && <p className="text-gray-500">Synthesising literature review — this may take 20-40 seconds…</p>}
+            {!loading && reviewResult && (
+              <div className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900">{reviewResult.review_title}</h2>
+                  <span className="text-xs font-semibold bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                    {reviewResult.papers_reviewed} paper{reviewResult.papers_reviewed !== 1 ? 's' : ''} reviewed · {reviewResult.confidence_score?.toFixed(1)}% confidence
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">Executive Summary</h3>
+                  <p className="text-gray-700 leading-relaxed">{reviewResult.executive_summary}</p>
+                </div>
+
+                {reviewResult.key_contributions?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-3">Key Contributions</h3>
+                    <div className="space-y-3">
+                      {reviewResult.key_contributions.map((kc: any, i: number) => (
+                        <div key={i} className="border-l-4 border-blue-400 pl-4 py-1">
+                          <p className="font-medium text-gray-800 text-sm">{kc.paper_title}</p>
+                          <p className="text-sm text-gray-600 mt-1"><span className="font-medium">Contribution:</span> {kc.contribution}</p>
+                          <p className="text-sm text-gray-500 mt-0.5"><span className="font-medium">Methodology:</span> {kc.methodology}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {reviewResult.method_comparison?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-3">Method Comparison</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-sm">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="p-2 border font-semibold w-1/3">Aspect</th>
+                            <th className="p-2 border font-semibold">Comparison</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reviewResult.method_comparison.map((mc: any, i: number) => (
+                            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="p-2 border font-medium text-gray-700">{mc.aspect}</td>
+                              <td className="p-2 border text-gray-600">{mc.description}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {reviewResult.consensus_findings?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-2">Consensus Findings</h3>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {reviewResult.consensus_findings.map((f: string, i: number) => <li key={i} className="text-gray-700 text-sm">{f}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                {reviewResult.research_gaps?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-2">Research Gaps Identified</h3>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {reviewResult.research_gaps.map((g: string, i: number) => <li key={i} className="text-orange-700 text-sm">{g}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                {reviewResult.future_work_suggestions?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-2">Future Work Suggestions</h3>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {reviewResult.future_work_suggestions.map((s: string, i: number) => <li key={i} className="text-green-700 text-sm">{s}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'gaps' && (
+          <div className="max-w-4xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold">Research Gap Detector</h1>
+              <button type="button" onClick={handleDetectGaps} disabled={loading || papers.length === 0} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 disabled:opacity-50">
+                {loading ? 'Analysing...' : 'Detect Gaps'}
+              </button>
+            </div>
+            {loading && <p className="text-gray-500">Analysing research gaps — please wait…</p>}
+            {!loading && gapsResult && (
+              <div className="space-y-6">
+                <div className="bg-white p-5 rounded-lg border shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-gray-800">Overall Assessment</h3>
+                    <span className="text-xs font-semibold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                      {gapsResult.confidence_score?.toFixed(1)}% confidence
+                    </span>
+                  </div>
+                  <p className="text-gray-700 text-sm leading-relaxed">{gapsResult.overall_assessment}</p>
+                </div>
+
+                {gapsResult.gaps?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-3">Identified Gaps ({gapsResult.gaps.length})</h3>
+                    <div className="space-y-4">
+                      {gapsResult.gaps.map((gap: any, i: number) => {
+                        const severityColors: Record<string, string> = {
+                          high: 'border-red-400 bg-red-50',
+                          medium: 'border-yellow-400 bg-yellow-50',
+                          low: 'border-gray-300 bg-gray-50',
+                        };
+                        const severityBadge: Record<string, string> = {
+                          high: 'bg-red-100 text-red-800',
+                          medium: 'bg-yellow-100 text-yellow-800',
+                          low: 'bg-gray-200 text-gray-700',
+                        };
+                        const catBadge: Record<string, string> = {
+                          methodological: 'bg-purple-100 text-purple-800',
+                          empirical: 'bg-blue-100 text-blue-800',
+                          theoretical: 'bg-indigo-100 text-indigo-800',
+                          application: 'bg-green-100 text-green-800',
+                        };
+                        return (
+                          <div key={i} className={`border-l-4 p-4 rounded-lg ${severityColors[gap.severity] || 'border-gray-300 bg-gray-50'}`}>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <p className="font-semibold text-gray-800 text-sm">{gap.title}</p>
+                              <div className="flex gap-1.5 shrink-0">
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${severityBadge[gap.severity] || 'bg-gray-200 text-gray-700'}`}>
+                                  {gap.severity}
+                                </span>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${catBadge[gap.category] || 'bg-gray-100 text-gray-600'}`}>
+                                  {gap.category}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-2">{gap.description}</p>
+                            <p className="text-sm text-green-700"><span className="font-medium">Recommended Action: </span>{gap.future_work}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {gapsResult.suggested_directions?.length > 0 && (
+                    <div className="bg-white p-4 rounded-lg border shadow-sm">
+                      <h3 className="font-semibold text-gray-800 mb-2">Suggested Research Directions</h3>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {gapsResult.suggested_directions.map((d: string, i: number) => <li key={i} className="text-sm text-gray-700">{d}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {gapsResult.related_topics?.length > 0 && (
+                    <div className="bg-white p-4 rounded-lg border shadow-sm">
+                      <h3 className="font-semibold text-gray-800 mb-2">Related Topics to Explore</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {gapsResult.related_topics.map((t: string, i: number) => (
+                          <span key={i} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab !== 'chat' && activeTab !== 'citations' && activeTab !== 'keywords' && activeTab !== 'similar' && activeTab !== 'review' && activeTab !== 'gaps' && (
           <div className="max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold capitalize">{activeTab.replace('-', ' ')}</h1>

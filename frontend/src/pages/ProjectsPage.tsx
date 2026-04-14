@@ -66,6 +66,11 @@ const ProjectsPage: React.FC = () => {
     navigate(`/projects/${id}`);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };;
+
 
   return (
     <div className="min-h-screen w-full bg-gray-50 flex flex-col items-center">
@@ -86,7 +91,7 @@ const ProjectsPage: React.FC = () => {
             <Link to="/profile" className="flex items-center gap-2.5 px-3 py-1.5 bg-gray-800 rounded-full border border-gray-700 hover:bg-gray-700 transition-all">
               <span className="text-sm font-semibold text-gray-300 hover:text-white transition-colors">{user?.full_name || user?.email}</span>
             </Link>
-            <button type="button" onClick={logout} className="p-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-900/30 transition-all">
+            <button type="button" onClick={handleLogout} className="p-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-900/30 transition-all">
               <LogOut size={16} />
             </button>
           </div>

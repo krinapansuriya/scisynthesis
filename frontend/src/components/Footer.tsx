@@ -2,10 +2,15 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Mail, Phone, MapPin,
-  Github, Twitter, Linkedin,
-  ArrowRight, BrainCircuit,
+  Linkedin, Github, Twitter,
+  ArrowRight, CheckCircle2,
 } from 'lucide-react';
 import SiteLogo from './SiteLogo';
+import emailjs from '@emailjs/browser';
+
+const EMAILJS_SERVICE_ID  = 'service_scisynthesis';
+const EMAILJS_TEMPLATE_ID = 'template_hvefuje';
+const EMAILJS_PUBLIC_KEY  = 'rtqUSs90uU3NrX_ai';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -45,13 +50,38 @@ const FooterLink: React.FC<{ href: string; children: React.ReactNode }> = ({ hre
 const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  React.useEffect(() => {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+  }, []);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    setSubscribed(true);
-    setEmail('');
-    setTimeout(() => setSubscribed(false), 4000);
+    setSending(true);
+    setError('');
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          name: email,
+          message: `New newsletter subscriber: ${email}`,
+          scisynthesis: 'SciSynthesis Newsletter',
+          time: new Date().toLocaleString(),
+        },
+        EMAILJS_PUBLIC_KEY
+      );
+      setSubscribed(true);
+      setEmail('');
+      setTimeout(() => setSubscribed(false), 5000);
+    } catch {
+      setError('Failed to subscribe. Please try again.');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -117,9 +147,9 @@ const Footer: React.FC = () => {
             </p>
 
             {subscribed ? (
-              <div className="flex items-center gap-2 px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white font-semibold">
-                <BrainCircuit size={15} className="text-gray-400" />
-                Subscribed!
+              <div className="flex items-center gap-2 px-4 py-3 bg-green-900/40 border border-green-700 rounded-xl text-sm text-green-400 font-semibold">
+                <CheckCircle2 size={15} />
+                Subscribed successfully!
               </div>
             ) : (
               <form onSubmit={handleSubscribe} className="space-y-2">
@@ -131,11 +161,13 @@ const Footer: React.FC = () => {
                   className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder:text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600 transition-all"
                   required
                 />
+                {error && <p className="text-red-400 text-xs">{error}</p>}
                 <button
                   type="submit"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                  disabled={sending}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-bold rounded-xl transition-colors shadow-sm disabled:opacity-50"
                 >
-                  Subscribe <ArrowRight size={14} />
+                  {sending ? 'Sending...' : <><span>Subscribe</span> <ArrowRight size={14} /></>}
                 </button>
               </form>
             )}
@@ -165,6 +197,8 @@ const Footer: React.FC = () => {
           {/* Copyright */}
           <p className="text-xs text-gray-600 font-medium text-center">
             © {new Date().getFullYear()} SCISYNTHESIS. All rights reserved.
+            &nbsp;·&nbsp;
+            <Link to="/privacy-policy" className="text-gray-500 hover:text-gray-300 transition-colors">Privacy Policy</Link>
             &nbsp;·&nbsp;
             <span className="text-gray-700">Built with AI for Researchers.</span>
           </p>

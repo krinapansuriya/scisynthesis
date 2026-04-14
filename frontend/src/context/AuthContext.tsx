@@ -15,12 +15,14 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (token: string) => Promise<void>;
-  logout: () => void;
+  login: (accessToken?: string) => Promise<void>;
+  logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const SESSION_KEY = 'ss_token';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -31,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.get('/auth/me');
       setUser(response.data);
     } catch {
-      localStorage.removeItem('token');
+      sessionStorage.removeItem(SESSION_KEY);
       setUser(null);
     } finally {
       setLoading(false);
@@ -39,28 +41,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
+    // Try to restore session on mount — works via httpOnly cookie OR sessionStorage token
+    fetchUser();
   }, []);
 
-  const login = async (token: string) => {
-    localStorage.setItem('token', token);
+  const login = async (accessToken?: string) => {
+    // Store token in sessionStorage as a reliable fallback alongside the httpOnly cookie.
+    // sessionStorage is cleared automatically when the browser tab closes.
+    if (accessToken) {
+      sessionStorage.setItem(SESSION_KEY, accessToken);
+    }
     await fetchUser();
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const logout = async () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    try {
+      await api.post('/auth/logout');  // Clears the httpOnly cookie server-side
+    } catch {
+      // Proceed even if server is unreachable
+    }
     setUser(null);
   };
 
   const updateUser = (data: Partial<User>) => {
-    if (user) {
-      setUser({ ...user, ...data });
-    }
+    if (user) setUser({ ...user, ...data });
   };
 
   return (
@@ -69,7 +74,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
-
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
