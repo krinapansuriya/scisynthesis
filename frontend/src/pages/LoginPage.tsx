@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
-import { Loader2, Mail, Phone, KeyRound, ArrowRight, RefreshCw } from 'lucide-react';
+import { Loader2, Mail, Phone, KeyRound, ArrowRight, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import SiteLogo from '../components/SiteLogo';
 import LoginDarkPremium from '../components/LoginDarkPremium';
 
@@ -14,6 +14,7 @@ const LoginPage: React.FC = () => {
   // Email login state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Phone OTP state
   const [phone, setPhone] = useState('');
@@ -143,14 +144,23 @@ const LoginPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-500 outline-none transition-all"
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-500 outline-none transition-all"
+                  placeholder="••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <button

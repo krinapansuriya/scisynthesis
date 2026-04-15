@@ -1,9 +1,19 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+  // In production, use the environment variable for the full API URL
+  // In development, use relative path (proxied by Vite)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  return '/api/v1';
+};
+
 const api = axios.create({
-  // Relative URL — Vite dev server proxies /api/* to the FastAPI backend.
-  // Same-origin means httpOnly cookies are sent automatically.
-  baseURL: '/api/v1',
+  // In production: full URL from VITE_API_URL env var (e.g., https://api.scisynthesis.in/api/v1)
+  // In development: relative path that Vite dev server proxies to the FastAPI backend
+  // withCredentials: true for httpOnly cookies
+  baseURL: getBaseURL(),
   withCredentials: true,
 });
 
